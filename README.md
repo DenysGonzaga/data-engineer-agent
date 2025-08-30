@@ -4,4 +4,6 @@ Using Strands Agentes and Model Context Protocol (FastMCP) to process small data
 
 Bedrock model must be enabled
 
-file .env
+explain file .env
+
+ I won't using any strands tools
