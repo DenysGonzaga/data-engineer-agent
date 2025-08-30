@@ -1,5 +1,4 @@
 import os
-import sys
 import boto3
 
 from rich import print
@@ -7,8 +6,11 @@ from rich.prompt import Prompt
 
 from dotenv import load_dotenv
 
-from strands import tool
+from mcp.client.sse import sse_client
+from strands.tools.mcp import MCPClient
+
 from strands import Agent
+from strands_tools import use_aws
 from strands.models import BedrockModel
 
 load_dotenv()
@@ -40,16 +42,24 @@ bedrock_model = BedrockModel(
 
 
 def main():
-    while True:
-        print("\n")
-        print(f"BEDROCK MODEL: {os.getenv("AWS_BEDROCK_MODEL_ID")}")
-        prompt_input = Prompt.ask("data-engineer-agent:>>> ")
-        de_agent = Agent(model=bedrock_model,
-            system_prompt=DE_SYSTEM_PROMPT,
-            tools=[],
-        )
-        
-        de_agent(prompt_input)
+    sse_mcp_client = MCPClient(lambda: sse_client("http://127.0.0.1:8000/sse"))
+
+    with sse_mcp_client:
+        mcp_tools = sse_mcp_client.list_tools_sync()
+        while True:
+            print("\n")
+            print(f"BEDROCK MODEL: {os.getenv("AWS_BEDROCK_MODEL_ID")}")
+            prompt_input = Prompt.ask("data-engineer-agent")
+            de_agent = Agent(model=bedrock_model,
+                system_prompt=DE_SYSTEM_PROMPT,
+                tools=[use_aws, mcp_tools],
+            )
+            
+            de_agent(prompt_input)
 
 if __name__ == "__main__":
     main()
+
+
+
+
