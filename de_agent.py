@@ -1,5 +1,6 @@
 import os
 import re
+import uuid
 import boto3
 
 from rich.console import Console
@@ -13,6 +14,7 @@ from mcp.client.sse import sse_client
 from strands import Agent
 from strands.tools.mcp import MCPClient
 from strands.models import BedrockModel
+from strands.session.file_session_manager import FileSessionManager
 
 load_dotenv()
 console = Console()
@@ -31,6 +33,7 @@ Don't verify if file exists.
 Table (using create_table) must be created after upload (using s3_upload_file) csv, but you will create it only if requested.
 Only uses glue database named "{os.getenv("AWS_GLUE_CATALOG_DATABASE")}"
 Explain your reasoning.
+You can answer other types of questions.
 """
 
 session = boto3.Session(
@@ -58,9 +61,21 @@ def main():
     )
 
     with sse_mcp_client:
+        session_id = f"de-agent-{uuid.uuid4()}"
+        session_manager = FileSessionManager(session_id=session_id, storage_dir='./session_manager/')
+
         mcp_tools = sse_mcp_client.list_tools_sync()
         console.print(
             f"BEDROCK MODEL: [green]{os.getenv('AWS_BEDROCK_MODEL_ID')}[/green]"
+        )
+
+        
+        de_agent = Agent(
+            model=bedrock_model,
+            system_prompt=DE_SYSTEM_PROMPT,
+            tools=[mcp_tools],
+            callback_handler=message_callback_controller,
+            session_manager=session_manager
         )
 
         err_count = 0
@@ -74,12 +89,6 @@ def main():
                 if len(prompt_input.strip()) == 0:
                     continue
 
-                de_agent = Agent(
-                    model=bedrock_model,
-                    system_prompt=DE_SYSTEM_PROMPT,
-                    tools=[mcp_tools],
-                    callback_handler=message_callback_controller,
-                )
 
                 with Progress(
                     TextColumn("[progress.description]{task.description}"),
