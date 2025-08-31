@@ -2,17 +2,17 @@ import os
 import boto3
 import awswrangler as wr
 from fastmcp import FastMCP
-from dotenv import load_dotenv
+from de_settings import app_settings
+
 
 mcp = FastMCP("DataEngineerMCPServer")
 
-load_dotenv()
 
 session = boto3.Session(
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-    aws_session_token=os.getenv("AWS_SESSION_TOKEN"),
-    region_name=os.getenv("AWS_DEFAULT_REGION"),
+    aws_access_key_id=app_settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=app_settings.AWS_SECRET_ACCESS_KEY,
+    aws_session_token=app_settings.AWS_SESSION_TOKEN,
+    region_name=app_settings.AWS_DEFAULT_REGION,
 )
 
 
@@ -50,13 +50,14 @@ def create_table(
     wr.catalog.delete_table_if_exists(
         database=database_name, table=table_name, boto3_session=session
     )
-    temp_path = f"s3://{os.getenv("AWS_DATA_BUCKET")}/athena-temp/"
+    temp_path = f"s3://{app_settings.AWS_DATA_BUCKET}/athena-temp/"
     wr.athena.to_iceberg(
         df=df,
         database=database_name,
         table=table_name,
         table_location=table_location,
         temp_path=temp_path,
+        boto3_session=session,
     )
     return {
         "status": "success",
@@ -69,6 +70,6 @@ def create_table(
 if __name__ == "__main__":
     mcp.run(
         transport="sse",
-        host=os.getenv("MCP_SERVER_HOST"),
-        port=int(os.getenv("MCP_SERVER_PORT")),
+        host=app_settings.MCP_SERVER_HOST,
+        port=app_settings.MCP_SERVER_PORT,
     )

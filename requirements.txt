@@ -3,3 +3,4 @@ fastmcp==2.11.3
 awswrangler==3.12.1
 strands-agents==1.6.0
 strands-agents-tools==0.2.5
+dynaconf==3.2.11
