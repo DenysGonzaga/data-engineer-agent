@@ -1,8 +1,9 @@
 import os
 import boto3
 
-from rich import print
+from rich.console import Console
 from rich.prompt import Prompt
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from dotenv import load_dotenv
 
@@ -14,6 +15,9 @@ from strands_tools import use_aws
 from strands.models import BedrockModel
 
 load_dotenv()
+console = Console()
+error_console = Console(stderr=True)
+
 bucket_workdir = os.getenv("AWS_DATA_BUCKET")
 
 DE_SYSTEM_PROMPT = f"""You are a data engineer assistant.
@@ -44,15 +48,39 @@ def main():
     with sse_mcp_client:
         mcp_tools = sse_mcp_client.list_tools_sync()
         while True:
-            print("\n")
-            print(f"BEDROCK MODEL: {os.getenv("AWS_BEDROCK_MODEL_ID")}")
-            prompt_input = Prompt.ask("data-engineer-agent")
-            de_agent = Agent(model=bedrock_model,
-                system_prompt=DE_SYSTEM_PROMPT,
-                tools=[mcp_tools],
-            )
-            
-            de_agent(prompt_input)
+            try:
+                console.print("\n", style="bold blue")
+                console.print(f"BEDROCK MODEL: [green]{os.getenv('AWS_BEDROCK_MODEL_ID')}[/green]")
+    
+                Prompt.prompt_suffix = " => "
+                prompt_input = Prompt.ask("[bold yellow]Data Engineer Agent[/bold yellow]")
+                
+                if len(prompt_input.strip()) == 0:
+                    continue
+
+                de_agent = Agent(
+                    model=bedrock_model,
+                    system_prompt=DE_SYSTEM_PROMPT,
+                    tools=[mcp_tools],
+                )
+                
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    transient=True,
+                    console=console,
+                ) as progress:
+                    task = progress.add_task("[cyan]Thinking...", start=False)
+                    progress.start_task(task)
+
+                    response = de_agent(prompt_input)
+                    progress.update(task, description="[green]Done!")
+
+                console.print("\n[bold green]Agent Response:[/bold green]")
+                console.print(response, style="white on black")
+                raise Exception("Teste")
+            except Exception as e:
+                error_console.print(f"[red]ERROR: {str(e)}[/red]")
 
 if __name__ == "__main__":
     main()
