@@ -18,13 +18,12 @@ bucket_workdir = os.getenv("AWS_DATA_BUCKET")
 
 DE_SYSTEM_PROMPT = f"""You are a data engineer assistant.
 
-At this moment, you only authorize to:
+At this moment, you only authorized to:
 
-1. Only upload CSV files using s3 bucket "{bucket_workdir}" on "landing" key.
-2. Parse and Read CSV files using Pandas SDK.
-3. Only write data in "{bucket_workdir}" on "processed" key.
-4. Query data in Amazon Athena.
-5. You aren't authorize to perform no other task in AWS Cloud.
+Only upload CSV files from ./data/ folder to s3 bucket "{bucket_workdir}" on "landing" key.
+Don't verify if file exists.
+Table (using create_table) must be created after upload (using s3_upload_file) csv, but you will create it only if requested.
+Only uses glue database named "{os.getenv("AWS_GLUE_CATALOG_DATABASE")}" 
 """
 
 session = boto3.Session(
@@ -39,8 +38,6 @@ bedrock_model = BedrockModel(
     boto_session=session
 )
 
-
-
 def main():
     sse_mcp_client = MCPClient(lambda: sse_client("http://127.0.0.1:8000/sse"))
 
@@ -52,7 +49,7 @@ def main():
             prompt_input = Prompt.ask("data-engineer-agent")
             de_agent = Agent(model=bedrock_model,
                 system_prompt=DE_SYSTEM_PROMPT,
-                tools=[use_aws, mcp_tools],
+                tools=[mcp_tools],
             )
             
             de_agent(prompt_input)
