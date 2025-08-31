@@ -2,7 +2,7 @@ import os
 import boto3
 import awswrangler as wr
 from fastmcp import FastMCP
-from de_settings import app_settings
+from app_settings import app_settings
 
 
 mcp = FastMCP("DataEngineerMCPServer")
@@ -65,6 +65,23 @@ def create_table(
             {"text": f"Table '{table_name}' Created."},
         ],
     }
+
+
+@mcp.tool
+def run_sql_athena(query: str, database_name: str):
+    df = wr.athena.read_sql_query(
+        sql=query, database=database_name, ctas_approach=False, boto3_session=session
+    )
+
+    return {"content": [{"type": "json", "json": df.to_dict(orient="records")}]}
+
+
+@mcp.tool
+def list_tables_tool(database_name: str) -> dict:
+    client = session.client("glue")
+    tables = client.get_tables(DatabaseName=database_name)["TableList"]
+
+    return {"content": [{"type": "json", "json": [t["Name"] for t in tables]}]}
 
 
 if __name__ == "__main__":

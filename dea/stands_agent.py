@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
 
-from de_settings import app_settings
+from app_settings import app_settings
 
 from mcp.client.sse import sse_client
 
@@ -30,8 +30,10 @@ Only upload CSV files from ./data/ folder to s3 bucket "{app_settings.AWS_DATA_B
 Don't verify if file exists.
 Table (using create_table) must be created after upload (using s3_upload_file) csv, but you will create it only if requested.
 Only uses glue database named "{app_settings.AWS_GLUE_CATALOG_DATABASE}"
+Use tool run_sql_athena to run SQL Queries through Amazon Athena.
 Explain your reasoning.
-You can answer other types of questions.
+
+You can answer other types of informational questions.
 """
 
 session = boto3.Session(
@@ -52,6 +54,7 @@ def message_callback_controller(**kwargs):
 
 
 def main():
+    breakpoint()
     sse_mcp_client = MCPClient(
         lambda: sse_client(
             f"http://{app_settings.MCP_SERVER_HOST}:{app_settings.MCP_SERVER_PORT}/sse"
