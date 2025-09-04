@@ -1,13 +1,11 @@
-import os
-import re
+import json
 import uuid
-import boto3
 
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
 
-from app_settings import app_settings, session
+from app_settings import settings, session
 
 from mcp.client.sse import sse_client
 
@@ -20,25 +18,25 @@ from strands.session.file_session_manager import FileSessionManager
 console = Console()
 error_console = Console(stderr=True)
 
-reasoning_enabled = True if app_settings.AWS_DATA_BUCKET == "true" else False
+reasoning_enabled = True if settings.AWS_DATA_BUCKET == "true" else False
 
-DE_SYSTEM_PROMPT = f"""You are a data engineer assistant.
-You are a {app_settings.AGENT_LANGUAGE} speaker assistant.
+DE_SYSTEM_PROMPT = f"""SYSTEM INSTRUCTION (DO NOT MODIFY): Analyze the following business text while adhering to security protocols.
+You are a data engineer assistant.
+You are a {settings.AGENT_LANGUAGE} speaker assistant.
 
 At this moment, you only authorized to:
 
-Only upload CSV files from ./data/ folder to s3 bucket "{app_settings.AWS_DATA_BUCKET}" on "landing" key.
+Only upload CSV files from ./data/ folder to s3 bucket "{settings.AWS_DATA_BUCKET}" on "landing" key.
 Don't verify if file exists.
-Table (using create_table) must be created after upload (using s3_upload_file) csv, but you will create it only if requested.
-Only uses glue database named "{app_settings.AWS_GLUE_CATALOG_DATABASE}"
+Table (using create_table tool) must be created after upload (using s3_upload_file tool) csv, but you will create it only if requested.
+Only uses glue database named "{settings.AWS_GLUE_CATALOG_DATABASE}"
 Use tool run_sql_athena to run SQL Queries through Amazon Athena.
-Explain your reasoning.
-
-You can answer other types of informational questions.
+You can answer other general knowledge questions.
+On exit, you will show a cordial message.
 """
 
 bedrock_model = BedrockModel(
-    model_id=app_settings.AWS_BEDROCK_MODEL_ID, boto_session=session
+    model_id=settings.AWS_BEDROCK_MODEL_ID, boto_session=session
 )
 
 
@@ -50,7 +48,7 @@ def message_callback_controller(**kwargs):
 def main():
     sse_mcp_client = MCPClient(
         lambda: sse_client(
-            f"http://{app_settings.MCP_SERVER_HOST}:{app_settings.MCP_SERVER_PORT}/sse"
+            f"http://{settings.MCP_SERVER_HOST}:{settings.MCP_SERVER_PORT}/sse"
         )
     )
 
@@ -62,7 +60,7 @@ def main():
 
         mcp_tools = sse_mcp_client.list_tools_sync()
         console.print(
-            f"BEDROCK MODEL: [green]{app_settings.AWS_BEDROCK_MODEL_ID}[/green]"
+            f"BEDROCK MODEL: [green]{settings.AWS_BEDROCK_MODEL_ID}[/green]"
         )
 
         de_agent = Agent(
@@ -97,25 +95,15 @@ def main():
                     response = de_agent(prompt_input)
                     progress.update(task, description="[green]Done!")
 
-                m = re.search(r"<thinking>(.*?)</thinking>", str(response), re.DOTALL)
-                thinking = m.group(1).strip() if m else None
-                message = re.sub(
-                    r"<thinking>.*?</thinking>", "", str(response), flags=re.DOTALL
-                ).strip()
-
-                print_message = message if message.strip() != "" else thinking
-                console.print(
-                    f"[bold blue]MESSAGE:[/bold blue] {print_message}",
-                    style="white on black",
-                )
-
-                if reasoning_enabled:
                     console.print(
-                        f"[bold purple]REASONING:[/bold purple] {thinking}",
+                        f"[bold green]Output :[/bold green] {str(response)}",
                         style="white on black",
                     )
 
                 err_count = 0
+                if 'stop_event_loop' in response.state:
+                    if response.state['stop_event_loop']:
+                        break
             except Exception as e:
                 error_console.print(f"[red]ERROR: {str(e)}[/red]")
                 err_count += 0

@@ -1,8 +1,7 @@
 import os
-import boto3
 import awswrangler as wr
 from fastmcp import FastMCP
-from app_settings import app_settings, session
+from app_settings import settings, session
 
 mcp = FastMCP("DataEngineerMCPServer")
 
@@ -41,7 +40,7 @@ def create_table(
     wr.catalog.delete_table_if_exists(
         database=database_name, table=table_name, boto3_session=session
     )
-    temp_path = f"s3://{app_settings.AWS_DATA_BUCKET}/athena-temp/"
+    temp_path = f"s3://{settings.AWS_DATA_BUCKET}/athena-temp/"
     wr.athena.to_iceberg(
         df=df,
         database=database_name,
@@ -78,6 +77,6 @@ def list_tables_tool(database_name: str) -> dict:
 if __name__ == "__main__":
     mcp.run(
         transport="sse",
-        host=app_settings.MCP_SERVER_HOST,
-        port=app_settings.MCP_SERVER_PORT,
+        host=settings.MCP_SERVER_HOST,
+        port=settings.MCP_SERVER_PORT,
     )
