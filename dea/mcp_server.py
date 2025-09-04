@@ -1,19 +1,9 @@
 import os
-import boto3
 import awswrangler as wr
 from fastmcp import FastMCP
-from de_settings import app_settings
-
+from app_settings import settings, session
 
 mcp = FastMCP("DataEngineerMCPServer")
-
-
-session = boto3.Session(
-    aws_access_key_id=app_settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=app_settings.AWS_SECRET_ACCESS_KEY,
-    aws_session_token=app_settings.AWS_SESSION_TOKEN,
-    region_name=app_settings.AWS_DEFAULT_REGION,
-)
 
 
 @mcp.tool
@@ -50,7 +40,7 @@ def create_table(
     wr.catalog.delete_table_if_exists(
         database=database_name, table=table_name, boto3_session=session
     )
-    temp_path = f"s3://{app_settings.AWS_DATA_BUCKET}/athena-temp/"
+    temp_path = f"s3://{settings.AWS_DATA_BUCKET}/athena-temp/"
     wr.athena.to_iceberg(
         df=df,
         database=database_name,
@@ -67,9 +57,26 @@ def create_table(
     }
 
 
+@mcp.tool
+def run_sql_athena(query: str, database_name: str):
+    df = wr.athena.read_sql_query(
+        sql=query, database=database_name, ctas_approach=False, boto3_session=session
+    )
+
+    return {"content": [{"type": "json", "json": df.to_dict(orient="records")}]}
+
+
+@mcp.tool
+def list_tables_tool(database_name: str) -> dict:
+    client = session.client("glue")
+    tables = client.get_tables(DatabaseName=database_name)["TableList"]
+
+    return {"content": [{"type": "json", "json": [t["Name"] for t in tables]}]}
+
+
 if __name__ == "__main__":
     mcp.run(
         transport="sse",
-        host=app_settings.MCP_SERVER_HOST,
-        port=app_settings.MCP_SERVER_PORT,
+        host=settings.MCP_SERVER_HOST,
+        port=settings.MCP_SERVER_PORT,
     )
