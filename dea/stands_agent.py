@@ -7,12 +7,13 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
 
-from app_settings import app_settings
+from app_settings import app_settings, session
 
 from mcp.client.sse import sse_client
 
 from strands import Agent
 from strands.tools.mcp import MCPClient
+from strands_tools import stop
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
@@ -36,13 +37,6 @@ Explain your reasoning.
 You can answer other types of informational questions.
 """
 
-session = boto3.Session(
-    aws_access_key_id=app_settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=app_settings.AWS_SECRET_ACCESS_KEY,
-    aws_session_token=app_settings.AWS_SESSION_TOKEN,
-    region_name=app_settings.AWS_DEFAULT_REGION,
-)
-
 bedrock_model = BedrockModel(
     model_id=app_settings.AWS_BEDROCK_MODEL_ID, boto_session=session
 )
@@ -54,7 +48,6 @@ def message_callback_controller(**kwargs):
 
 
 def main():
-    breakpoint()
     sse_mcp_client = MCPClient(
         lambda: sse_client(
             f"http://{app_settings.MCP_SERVER_HOST}:{app_settings.MCP_SERVER_PORT}/sse"
@@ -75,7 +68,7 @@ def main():
         de_agent = Agent(
             model=bedrock_model,
             system_prompt=DE_SYSTEM_PROMPT,
-            tools=[mcp_tools],
+            tools=[mcp_tools, stop],
             callback_handler=message_callback_controller,
             session_manager=session_manager,
         )

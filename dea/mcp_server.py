@@ -2,18 +2,9 @@ import os
 import boto3
 import awswrangler as wr
 from fastmcp import FastMCP
-from app_settings import app_settings
-
+from app_settings import app_settings, session
 
 mcp = FastMCP("DataEngineerMCPServer")
-
-
-session = boto3.Session(
-    aws_access_key_id=app_settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=app_settings.AWS_SECRET_ACCESS_KEY,
-    aws_session_token=app_settings.AWS_SESSION_TOKEN,
-    region_name=app_settings.AWS_DEFAULT_REGION,
-)
 
 
 @mcp.tool
