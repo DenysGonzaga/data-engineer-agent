@@ -10,4 +10,5 @@ dependencies = [
     "strands-agents-tools==0.2.5",
     "dynaconf==3.2.11",
     "pylint>=3.3.8",
+    "bandit>=1.8.6",
 ]

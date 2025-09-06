@@ -3,7 +3,7 @@ name: build-flow
 on: [push]
 
 jobs:
-  deps:
+  dependencies:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -27,10 +27,10 @@ jobs:
       uses: actions/cache/save@v4
       if: always()
       with:
-        path: ~/.cache/uv
+        path: .venv
         key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
   pylint:
-    needs: deps
+    needs: dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,8 +41,25 @@ jobs:
       - name: Restore uv cache
         uses: actions/cache/restore@v4
         with:
-          path: ~/.cache/uv
+          path: .venv
           key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
       - name: Analysing the code with pylint
         run: |
           uv run pylint $(git ls-files './dea/*.py')
+  bandit:
+    needs: dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.14"
+      - name: Restore uv cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .venv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+      - name: Analysing the code with pylint
+        run: |
+          uv run bandit $(git ls-files './dea/*.py')
