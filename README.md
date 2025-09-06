@@ -54,6 +54,20 @@ AWS_PROFILE is optional, if provided, other all credential variables, such as AW
 Access to Amazon Bedrock foundation models, with the exception of OpenAI gpt-oss-120b and gpt-oss-20b models, isn't granted by default. 
 
 we You can request access, or modify access, to foundation models only by using the Amazon Bedrock console. Read [more](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html).
+ 
+## Running
+
+Data processing are being done by a MCP Server using FAST MCP, yes, I know, I could add tools directly on my Strands Agent.
+
+```bash
+uv run -m dea.mcp_server
+```
+
+Finally, let's run the agent.
+
+```bash
+uv run -m dea.mcp_server
+```
 
 ## Future implementations
 

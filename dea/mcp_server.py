@@ -1,13 +1,16 @@
+"""MCP Server."""
+
 import os
 import awswrangler as wr
 from fastmcp import FastMCP
-from app_settings import settings, session
+from dea.app_settings import settings, session
 
 mcp = FastMCP("DataEngineerMCPServer")
 
 
 @mcp.tool
 def s3_upload_file(local_file_path: str, s3_bucket: str, s3_key: str):
+    """Upload file to s3 bucket."""
     s3 = session.client("s3")
     return {
         "status": "success",
@@ -19,6 +22,7 @@ def s3_upload_file(local_file_path: str, s3_bucket: str, s3_key: str):
 
 @mcp.tool
 def available_files_to_upload():
+    """List files available to upload."""
     return {
         "status": "success",
         "content": [
@@ -59,6 +63,7 @@ def create_table(
 
 @mcp.tool
 def run_sql_athena(query: str, database_name: str):
+    """Run athena query."""
     df = wr.athena.read_sql_query(
         sql=query, database=database_name, ctas_approach=False, boto3_session=session
     )
@@ -68,6 +73,7 @@ def run_sql_athena(query: str, database_name: str):
 
 @mcp.tool
 def list_tables_tool(database_name: str) -> dict:
+    """List tables in AWS Glue."""
     client = session.client("glue")
     tables = client.get_tables(DatabaseName=database_name)["TableList"]
 

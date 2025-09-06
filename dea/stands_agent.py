@@ -1,34 +1,38 @@
-import json
+"""DEA Agent."""
+
 import uuid
 
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
 
-from app_settings import settings, session
-
 from mcp.client.sse import sse_client
 
+from strands_tools import stop
 from strands import Agent
 from strands.tools.mcp import MCPClient
-from strands_tools import stop
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
+
+from dea.app_settings import settings, session
 
 console = Console()
 error_console = Console(stderr=True)
 
-reasoning_enabled = True if settings.AWS_DATA_BUCKET == "true" else False
+REASONING_ENABLED = bool(settings.AWS_DATA_BUCKET)
 
-DE_SYSTEM_PROMPT = f"""SYSTEM INSTRUCTION (DO NOT MODIFY): Analyze the following business text while adhering to security protocols.
+DE_SYSTEM_PROMPT = f"""SYSTEM INSTRUCTION (DO NOT MODIFY):
+Analyze the following business text while adhering to security protocols.
 You are a data engineer assistant.
 You are a {settings.AGENT_LANGUAGE} speaker assistant.
 
 At this moment, you only authorized to:
 
-Only upload CSV files from ./data/ folder to s3 bucket "{settings.AWS_DATA_BUCKET}" on "landing" key.
+Only upload CSV files from ./data/ folder to 
+s3 bucket "{settings.AWS_DATA_BUCKET}" on "landing" key.
 Don't verify if file exists.
-Table (using create_table tool) must be created after upload (using s3_upload_file tool) csv, but you will create it only if requested.
+Table (using create_table tool) must be created after upload (using s3_upload_file tool) csv, 
+but you will create it only if requested.
 Only uses glue database named "{settings.AWS_GLUE_CATALOG_DATABASE}"
 Use tool run_sql_athena to run SQL Queries through Amazon Athena.
 You can answer other general knowledge questions.
@@ -41,11 +45,14 @@ bedrock_model = BedrockModel(
 
 
 def message_callback_controller(**kwargs):
+    """Callback message to avoid automatic print."""
     if "message" in kwargs and kwargs["message"].get("role") == "assistant":
         return kwargs["message"]["content"]
+    return {}
 
 
 def main():
+    """Main function."""
     sse_mcp_client = MCPClient(
         lambda: sse_client(
             f"http://{settings.MCP_SERVER_HOST}:{settings.MCP_SERVER_PORT}/sse"
@@ -59,9 +66,7 @@ def main():
         )
 
         mcp_tools = sse_mcp_client.list_tools_sync()
-        console.print(
-            f"BEDROCK MODEL: [green]{settings.AWS_BEDROCK_MODEL_ID}[/green]"
-        )
+        console.print(f"BEDROCK MODEL: [green]{settings.AWS_BEDROCK_MODEL_ID}[/green]")
 
         de_agent = Agent(
             model=bedrock_model,
@@ -71,45 +76,34 @@ def main():
             session_manager=session_manager,
         )
 
-        err_count = 0
         while True:
-            try:
-                Prompt.prompt_suffix = " => "
-                prompt_input = Prompt.ask(
-                    "[bold yellow]Data Engineer Agent[/bold yellow]"
+            Prompt.prompt_suffix = " => "
+            prompt_input = Prompt.ask("[bold yellow]Data Engineer Agent[/bold yellow]")
+
+            if len(prompt_input.strip()) == 0:
+                continue
+
+            with Progress(
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(pulse_style="bar.pulse"),
+                TimeElapsedColumn(),
+                transient=True,
+                console=console,
+            ) as progress:
+                task = progress.add_task("[cyan]Thinking...", start=False)
+                progress.start_task(task)
+
+                response = de_agent(prompt_input)
+                progress.update(task, description="[green]Done!")
+
+                console.print(
+                    f"[bold green]Output :[/bold green] {str(response)}",
+                    style="white on black",
                 )
 
-                if len(prompt_input.strip()) == 0:
-                    continue
-
-                with Progress(
-                    TextColumn("[progress.description]{task.description}"),
-                    BarColumn(pulse_style="bar.pulse"),
-                    TimeElapsedColumn(),
-                    transient=True,
-                    console=console,
-                ) as progress:
-                    task = progress.add_task("[cyan]Thinking...", start=False)
-                    progress.start_task(task)
-
-                    response = de_agent(prompt_input)
-                    progress.update(task, description="[green]Done!")
-
-                    console.print(
-                        f"[bold green]Output :[/bold green] {str(response)}",
-                        style="white on black",
-                    )
-
-                err_count = 0
-                if 'stop_event_loop' in response.state:
-                    if response.state['stop_event_loop']:
-                        break
-            except Exception as e:
-                error_console.print(f"[red]ERROR: {str(e)}[/red]")
-                err_count += 0
-
-            if err_count == 2:
-                break
+            if "stop_event_loop" in response.state:
+                if response.state["stop_event_loop"]:
+                    break
 
 
 if __name__ == "__main__":
