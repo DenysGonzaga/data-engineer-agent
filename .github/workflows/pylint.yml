@@ -25,7 +25,7 @@ jobs:
         key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
     - name: Install dependencies
       run: |
-        uv sync -- frozen
+        uv sync --frozen
     - name: Analysing the code with pylint
       run: |
         pylint $(git ls-files './dea/*.py')
