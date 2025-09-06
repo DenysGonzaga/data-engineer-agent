@@ -60,13 +60,13 @@ we You can request access, or modify access, to foundation models only by using 
 Data processing are being done by a MCP Server using FAST MCP, yes, I know, I could add tools directly on my Strands Agent.
 
 ```bash
-uv run -m dea.mcp_server
+uv run -m dea.server
 ```
 
 Finally, let's run the agent.
 
 ```bash
-uv run -m dea.mcp_server
+uv run -m dea.agent
 ```
 
 ## Future implementations

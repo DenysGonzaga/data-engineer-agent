@@ -3,7 +3,7 @@
 import os
 import awswrangler as wr
 from fastmcp import FastMCP
-from dea.app_settings import settings, session
+from dea.tools.app_settings import settings, session
 
 mcp = FastMCP("DataEngineerMCPServer")
 

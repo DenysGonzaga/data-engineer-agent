@@ -2,17 +2,17 @@ name: build-flow
 
 on: [push]
 
+env:
+  UV_VERSION: "0.8.14"
+
 jobs:
   dependencies:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.13"]
     steps:
     - name: Install uv
       uses: astral-sh/setup-uv@v6
       with:
-          version: "0.8.14"
+          version: ${{ env.UV_VERSION }}
     - uses: actions/checkout@v4
     - name: Restore uv cache
       uses: actions/cache/restore@v4
@@ -37,7 +37,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.8.14"
+          version: ${{ env.UV_VERSION }}
       - name: Restore uv cache
         uses: actions/cache/restore@v4
         with:
@@ -54,7 +54,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.8.14"
+          version: ${{ env.UV_VERSION }}
       - name: Restore uv cache
         uses: actions/cache/restore@v4
         with:

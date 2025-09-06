@@ -14,7 +14,7 @@ from strands.tools.mcp import MCPClient
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
-from dea.app_settings import settings, session
+from dea.tools.app_settings import settings, session
 
 console = Console()
 error_console = Console(stderr=True)
@@ -97,7 +97,7 @@ def main():
                 progress.update(task, description="[green]Done!")
 
                 console.print(
-                    f"[bold green]Output :[/bold green] {str(response)}",
+                    f"[bold green]Output:[/bold green] {str(response)}",
                     style="white on black",
                 )
 
