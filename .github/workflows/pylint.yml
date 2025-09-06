@@ -28,4 +28,4 @@ jobs:
         uv sync --frozen
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files './dea/*.py')
+        uv run pylint $(git ls-files './dea/*.py')
